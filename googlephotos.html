@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carregando sistema...</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            color: #00ff66;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        .terminal-container {
+            position: relative;
+            z-index: 2;
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            background: rgba(0, 10, 0, 0.85);
+            border: 2px solid #00ff66;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 255, 102, 0.4);
+            margin: 5vh auto;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .terminal-header {
+            background: #002200;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #00ff66;
+        }
+
+        .dot {
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .dot.red { background-color: #ff5f56; }
+        .dot.yellow { background-color: #ffbd2e; }
+        .dot.green { background-color: #27c93f; }
+
+        .title {
+            margin-left: 10px;
+            font-size: 0.9rem;
+            color: #00ff66;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .terminal-body {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-break: break-all;
+        }
+
+        .terminal-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .terminal-body::-webkit-scrollbar-track {
+            background: #000;
+        }
+
+        .terminal-body::-webkit-scrollbar-thumb {
+            background: #00ff66;
+            border-radius: 4px;
+        }
+
+        .line {
+            margin-bottom: 8px;
+            white-space: pre-wrap;
+        }
+
+        .success { color: #00ff66; }
+        .warning { color: #ff3333; font-weight: bold; }
+        .info { color: #00ffff; }
+
+        .progress-bar-container {
+            margin: 10px 0;
+            font-family: monospace;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 0, 0, 0);
+            z-index: 10;
+            pointer-events: none;
+            transition: background 0.2s ease;
+        }
+
+        .overlay.flash {
+            animation: flashRed 0.5s infinite;
+        }
+
+        @keyframes flashRed {
+            0% { background: rgba(255, 0, 0, 0); }
+            50% { background: rgba(255, 0, 0, 0.4); }
+            100% { background: rgba(255, 0, 0, 0); }
+        }
+
+        .prank-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        .prank-modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .prank-content {
+            background: #0a0a0a;
+            border: 3px solid #ff3333;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 0 30px rgba(255, 51, 51, 0.6);
+        }
+
+        .warning-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .prank-content h2 {
+            color: #ff3333;
+            font-size: 2rem;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+        }
+
+        .prank-text {
+            color: #ffffff;
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+
+        .prank-sub {
+            color: #cccccc;
+            font-size: 0.95rem;
+            margin-bottom: 25px;
+            line-height: 1.4;
+        }
+
+        #restartBtn {
+            background: #ff3333;
+            color: #fff;
+            border: none;
+            padding: 12px 25px;
+            font-size: 1rem;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #restartBtn:hover {
+            background: #cc0000;
+        }
+    </style>
+</head>
+<body>
+    <div class="matrix-bg">
+        <canvas id="matrixCanvas"></canvas>
+    </div>
+
+    <div class="terminal-container" id="terminalContainer">
+        <div class="terminal-header">
+            <span class="dot red"></span>
+            <span class="dot yellow"></span>
+            <span class="dot green"></span>
+            <span class="title">REMOTE TERMINAL v4.8 (SIMULATION)</span>
+        </div>
+        <div class="terminal-body" id="terminalBody">
+            <div id="output"></div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
+
+    <div class="prank-modal" id="prankModal">
+        <div class="prank-content">
+            <div class="warning-icon">⚠️</div>
+            <h2>CALMA!</h2>
+            <p class="prank-text">TROJAN DETECTADO.</p>
+            <p class="prank-sub">Em alguns minuto seu Celular sera Bloqueado!</p>
+            <button id="restartBtn">Reiniciar Celular</button>
+        </div>
+    </div>
+
+    <script>
+        // Matrix Rain Background Effect
+        const canvas = document.getElementById('matrixCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        const chars = '0123456789ABCDEF@#$%&*+-<>~\\/|';
+        const fontSize = 14;
+        let columns = Math.floor(canvas.width / fontSize);
+        let drops = Array(columns).fill(1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff66';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 50);
+
+        // Web Audio API for synthetic beeps
+        let audioCtx = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playBeep(frequency = 800, duration = 0.05, type = 'sine') {
+            try {
+                initAudio();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.value = frequency;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {}
+        }
+
+        // Terminal Simulation Script
+        const outputDiv = document.getElementById('output');
+        const terminalBody = document.getElementById('terminalBody');
+        const overlay = document.getElementById('overlay');
+        const prankModal = document.getElementById('prankModal');
+        const restartBtn = document.getElementById('restartBtn');
+
+        const simulationSteps = [
+            { text: "Initializing remote secure shell...", type: "info", delay: 400 },
+            { text: "Establishing connection to host node 192.168.1.105...", type: "normal", delay: 600 },
+            { text: "Handshake complete. Status: SECURE", type: "success", delay: 500 },
+            { text: "Bypassing network security layers...", type: "warning", delay: 800 },
+            { text: "Scanning target device environment...", type: "info", delay: 500 },
+            { text: "-> Architecture: ARM64 (Mobile Interface)", type: "normal", delay: 400 },
+            { text: "-> OS: Android / iOS Simulated Bridge", type: "normal", delay: 400 },
+            { text: "Enumerating local directories & application caches...", type: "info", delay: 700 },
+            { text: "Found: /com.whatsapp/databases", type: "success", delay: 300 },
+            { text: "Found: /com.instagram.android/cache", type: "success", delay: 300 },
+            { text: "Found: /DCIM/Camera (Gallery Media)", type: "success", delay: 300 },
+            { text: "Found: /banking.secure.vault", type: "warning", delay: 400 },
+            { text: "Initiating data extraction stream...", type: "warning", delay: 600 },
+            { type: "progress", duration: 3000, delay: 200 },
+            { text: "Firewall override successful!", type: "success", delay: 500 },
+            { text: "ACCESS LEVEL: 100% - ROOT PRIVILEGES GRANTED", type: "warning", delay: 700 },
+            { text: ">>> SYSTEM OVERRIDE COMPLETE <<<", type: "warning", delay: 1000 }
+        ];
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function runProgressBar() {
+            const pContainer = document.createElement('div');
+            pContainer.className = 'progress-bar-container';
+            outputDiv.appendChild(pContainer);
+
+            const totalSteps = 20;
+            for (let i = 0; i <= totalSteps; i++) {
+                const percent = Math.floor((i / totalSteps) * 100);
+                const filled = '█'.repeat(i);
+                const empty = '-'.repeat(totalSteps - i);
+                pContainer.innerHTML = `<span class="warning">Extracting: [${filled}${empty}] ${percent}%</span>`;
+                terminalBody.scrollTop = terminalBody.scrollHeight;
+                playBeep(600 + i * 20, 0.05);
+                await sleep(150);
+            }
+        }
+
+        async function runSimulation() {
+            outputDiv.innerHTML = '';
+            prankModal.classList.remove('show');
+            overlay.classList.remove('flash');
+
+            for (let step of simulationSteps) {
+                if (step.type === 'progress') {
+                    await runProgressBar();
+                } else {
+                    const line = document.createElement('div');
+                    line.className = `line ${step.type || 'normal'}`;
+                    line.textContent = `> ${step.text}`;
+                    outputDiv.appendChild(line);
+                    terminalBody.scrollTop = terminalBody.scrollHeight;
+                    playBeep(900, 0.04);
+                    await sleep(step.delay);
+                }
+            }
+
+            overlay.classList.add('flash');
+            for(let i=0; i<5; i++) {
+                playBeep(300, 0.1, 'sawtooth');
+                await sleep(200);
+            }
+
+            if (navigator.vibrate) {
+                try { navigator.vibrate([200, 100, 200, 100, 500]); } catch(e) {}
+            }
+
+            await sleep(800);
+            prankModal.classList.add('show');
+        }
+
+        restartBtn.addEventListener('click', () => {
+            runSimulation();
+        });
+
+        window.addEventListener('load', () => {
+            setTimeout(runSimulation, 1000);
+        });
+    </script>
+</body>
+</html>
